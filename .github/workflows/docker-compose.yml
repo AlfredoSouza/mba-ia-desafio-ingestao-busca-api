@@ -1,0 +1,38 @@
+name: Docker Compose
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Compose
+        run: docker compose config --quiet
+      - name: Start the complete stack without local Python or an env file
+        run: docker compose up -d --wait --wait-timeout 180
+      - name: Verify API and database initialization
+        run: |
+          curl --fail http://localhost:8000/health
+          curl --fail http://localhost:8000/docs
+          docker compose exec -T api python -c "from src.database import connection; from pathlib import Path; from src.config import get_settings; conn = connection(); db = conn.__enter__(); assert db.execute(\"SELECT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'vector')\").fetchone()['exists']; assert db.execute(\"SELECT to_regclass('public.documents') IS NOT NULL AS initialized\").fetchone()['initialized']; conn.__exit__(None, None, None); (get_settings().upload_dir / 'persistence-check.txt').write_text('ok')"
+      - name: Run existing tests inside the Python image
+        run: docker compose exec -T api python -m pytest -q
+      - name: Verify persistence after recreating containers
+        run: |
+          docker compose down
+          docker compose up -d --wait --wait-timeout 180
+          docker compose exec -T api python -c "from src.config import get_settings; assert (get_settings().upload_dir / 'persistence-check.txt').read_text() == 'ok'"
+          curl --fail http://localhost:8000/health
+      - name: Container logs
+        if: failure()
+        run: docker compose logs --no-color
+      - name: Clean up
+        if: always()
+        run: docker compose down -v

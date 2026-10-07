@@ -1,6 +1,7 @@
 services:
   postgres:
     image: pgvector/pgvector:pg16
+    restart: unless-stopped
     environment:
       POSTGRES_DB: ragdb
       POSTGRES_USER: postgres
@@ -11,11 +12,38 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d ragdb"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d ragdb"]
       interval: 5s
       timeout: 5s
       retries: 10
+      start_period: 10s
+
+  api:
+    build: .
+    restart: unless-stopped
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/ragdb
+      COLLECTION_NAME: ${COLLECTION_NAME:-pdf_documents}
+      OPENAI_EMBEDDING_MODEL: ${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
+      OPENAI_CHAT_MODEL: ${OPENAI_CHAT_MODEL:-gpt-5-nano}
+      UPLOAD_DIR: uploads
+      MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-20}
+      API_URL: http://localhost:8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
 
 volumes:
   postgres_data:
-
+  uploads_data:

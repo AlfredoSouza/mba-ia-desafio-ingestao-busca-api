@@ -4,52 +4,72 @@ Projeto em Python com LangChain, PostgreSQL e pgVector. Um PDF pode ser enviado 
 
 ## Requisitos
 
-- Python 3.11+
-- Docker e Docker Compose
-- Chave da API OpenAI
+- Docker com Docker Compose v2 (por exemplo, Docker Desktop)
+- Chave da API OpenAI para ingestão e perguntas
 
-## Configuração
+Não é necessário instalar Python, criar um ambiente virtual ou executar `pip` na sua máquina.
 
-```bash
-python -m venv .venv
-```
+## Configuração inicial
+
+Copie `.env.example` para `.env`:
 
 Linux/macOS:
 
 ```bash
-source .venv/bin/activate
+cp .env.example .env
 ```
 
 Windows PowerShell:
 
 ```powershell
-.venv\Scripts\Activate.ps1
+Copy-Item .env.example .env
 ```
 
-Instale as dependências e configure o ambiente:
-
-```bash
-pip install -r requirements.txt
-cp .env.example .env
-```
-
-Preencha `OPENAI_API_KEY` no arquivo `.env`.
+Preencha `OPENAI_API_KEY` no arquivo `.env`. Essa configuração é feita uma única vez.
+A API pode iniciar sem a chave, mas ingestão e perguntas precisam de uma chave válida.
 
 ## Execução
 
-Suba o PostgreSQL com pgVector:
+Com o Docker em execução, na raiz do projeto:
+
+```bash
+docker compose up
+```
+
+Na primeira execução, o Compose constrói a imagem Python e instala as dependências de
+`requirements.txt`, sobe o PostgreSQL com pgVector e inicia a API depois que o banco
+estiver pronto. A API cria automaticamente a extensão e a tabela de documentos.
+Nas próximas execuções, a imagem já construída é reutilizada.
+
+A documentação interativa estará em http://localhost:8000/docs.
+O endpoint http://localhost:8000/health informa se a API está respondendo.
+
+Para executar em segundo plano:
 
 ```bash
 docker compose up -d
 ```
 
-Inicie a API:
+Para acompanhar os logs e parar os serviços:
 
 ```bash
-uvicorn src.api:app --reload
+docker compose logs -f api
+docker compose down
 ```
 
-A documentação interativa estará em `http://localhost:8000/docs`.
+O banco e os PDFs enviados são mantidos em volumes Docker, mesmo após
+`docker compose down`. `docker compose down -v` também remove esses dados.
+
+Após alterar o código ou as dependências, reconstrua a imagem:
+
+```bash
+docker compose up --build
+```
+
+Dentro do container, a API usa o endereço `postgres:5432` para acessar o banco.
+O Compose define esse endereço automaticamente, mesmo que o `.env` contenha
+`DATABASE_URL` com `localhost` para execução local. O diretório de uploads no
+container é `/app/uploads`, persistido pelo volume `uploads_data`.
 
 ## Enviar um PDF pela API
 
@@ -77,19 +97,20 @@ curl -X POST http://localhost:8000/questions \
 Com a API em execução:
 
 ```bash
-python src/chat.py
+docker compose exec api python -m src.chat
 ```
 
 Também é possível executar a ingestão diretamente, preservando o fluxo pedido no desafio:
 
 ```bash
-python src/ingest.py document.pdf
+docker compose cp document.pdf api:/app/uploads/document.pdf
+docker compose exec api python -m src.ingest uploads/document.pdf
 ```
 
 ## Testes
 
 ```bash
-pytest
+docker compose exec api python -m pytest
 ```
 
 ## Garantia de contexto
