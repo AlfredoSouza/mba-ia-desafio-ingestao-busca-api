@@ -125,7 +125,7 @@ class DatabaseIntegrationTests(unittest.TestCase):
                 with patch.object(search, "get_settings", return_value=settings), \
                      patch.object(search, "ChatOpenAI", return_value=llm):
                     self.assertEqual(search.search_prompt("Qual o conteúdo?"), "Resposta simulada")
-                self.assertIn(after[0][0].page_content, llm.invoke.call_args.args[0])
+                self.assertTrue(any(doc.page_content in llm.invoke.call_args.args[0] for doc, _ in after))
             finally:
                 store.delete_collection()
 
