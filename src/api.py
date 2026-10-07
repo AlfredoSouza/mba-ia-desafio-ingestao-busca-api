@@ -9,6 +9,7 @@ from src.services.document_service import (
     InvalidPdfError,
     UploadTooLargeError,
     get_document,
+    list_documents,
     save_upload,
     to_response,
 )
@@ -46,6 +47,11 @@ async def upload_document(
     if created:
         background_tasks.add_task(ingest_document, row["id"])
     return to_response(row)
+
+
+@app.get("/documents", response_model=list[DocumentResponse])
+def documents() -> list[dict]:
+    return [to_response(row) for row in list_documents()]
 
 
 @app.get("/documents/{document_id}", response_model=DocumentResponse)

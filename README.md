@@ -100,6 +100,11 @@ Com a API em execução:
 docker compose exec api python -m src.chat
 ```
 
+O terminal lista o ID, o nome do arquivo e o status de cada documento antes de
+pedir o ID. Documentos com status `ready` estão prontos para perguntas.
+Se não houver documentos, envie um PDF pela API primeiro.
+A listagem também pode ser consultada por `GET /documents`.
+
 Também é possível executar a ingestão diretamente, preservando o fluxo pedido no desafio:
 
 ```bash

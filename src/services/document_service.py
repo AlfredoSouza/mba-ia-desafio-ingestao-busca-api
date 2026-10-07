@@ -57,6 +57,13 @@ async def save_upload(upload: UploadFile) -> tuple[dict, bool]:
     return row, True
 
 
+def list_documents() -> list[dict]:
+    with connection() as conn:
+        return conn.execute(
+            "SELECT * FROM documents ORDER BY created_at DESC, id"
+        ).fetchall()
+
+
 def get_document(document_id: UUID) -> dict | None:
     with connection() as conn:
         return conn.execute("SELECT * FROM documents WHERE id = %s", (document_id,)).fetchone()
