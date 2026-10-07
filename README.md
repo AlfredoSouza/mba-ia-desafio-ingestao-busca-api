@@ -50,7 +50,6 @@ pip install -r requirements.txt
 Preencha `OPENAI_API_KEY` no `.env`. O projeto utiliza apenas OpenAI.
 Os modelos de embeddings e de chat podem ser alterados por
 `OPENAI_EMBEDDING_MODEL` e `OPENAI_CHAT_MODEL`.
-Não envie o `.env` para o GitHub.
 
 Exemplo de configuração (substitua apenas a chave da API):
 
