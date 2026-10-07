@@ -1,6 +1,6 @@
 # Ingestão e busca semântica de PDFs
 
-Projeto em Python com LangChain, PostgreSQL e pgVector. Um PDF pode ser enviado por API, é dividido em chunks de 1000 caracteres com sobreposição de 150, convertido em embeddings e usado para responder perguntas sem recorrer a conhecimento externo.
+Projeto em Python com LangChain, PostgreSQL e pgVector. Um PDF pode ser enviado por API, e dividido em chunks de 1000 caracteres com sobreposicao de 150, convertido em embeddings e usado para responder perguntas sem recorrer a conhecimento externo.
 
 ## Requisitos
 
