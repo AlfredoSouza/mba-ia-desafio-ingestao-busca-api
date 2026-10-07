@@ -41,7 +41,7 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(count, 2)
         self.assertEqual([len(chunk.page_content) for chunk in chunks], [1000, 950])
         self.assertEqual(chunks[1].metadata["start_index"], 850)
-        self.assertEqual(store.add_documents.call_args.kwargs["ids"], ["pdf-chunk-0", "pdf-chunk-1"])
+        self.assertEqual(store.add_documents.call_args.kwargs["ids"], ["desafio_integration_test:0", "desafio_integration_test:1"])
 
     def test_empty_pdf_does_not_clear_existing_collection(self):
         loader = Mock()

@@ -31,7 +31,10 @@ def ingest_pdf(pdf_path: str | Path | None = None) -> int:
         chunk.metadata["source"] = path.name
     # O desafio usa um único PDF: substitui somente a collection configurada.
     vectorstore = get_vectorstore(settings, reset=True)
-    vectorstore.add_documents(chunks, ids=[f"pdf-chunk-{index}" for index in range(len(chunks))])
+    vectorstore.add_documents(
+        chunks,
+        ids=[f"{settings['collection_name']}:{index}" for index in range(len(chunks))],
+    )
     print(f"PDF: {path.name}")
     print(f"Ingestão concluída: {len(pages)} páginas e {len(chunks)} chunks.")
     return len(chunks)
