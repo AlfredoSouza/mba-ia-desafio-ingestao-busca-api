@@ -70,7 +70,7 @@ class PipelineTests(unittest.TestCase):
         self.assertIn("CONTEXTO:\nFaturamento: 10 milhões.", prompt)
         self.assertIn("EXEMPLOS DE PERGUNTAS FORA DO CONTEXTO:", prompt)
         self.assertIn("Nunca invente ou use conhecimento externo.", prompt)
-        self.assertIn("PERGUNTA DO USUÁRIO:\nQual o faturamento?", prompt)
+        self.assertIn("PERGUNTA DO USUARIO:\nQual o faturamento?", prompt)
 
     def test_no_results_returns_required_answer_without_llm_call(self):
         store = Mock()
