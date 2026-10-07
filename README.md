@@ -18,8 +18,8 @@ responder perguntas pelo terminal com base somente nos trechos recuperados.
 └── README.md
 ```
 
-O PDF incluído é o exemplo do repositório da faculdade. Os diretórios
-`tests/` e `.github/` contêm apenas a verificação automática.
+O PDF incluído é o exemplo do repositório da faculdade. O diretório `tests/`
+contém testes que podem ser executados manualmente.
 
 ## Requisitos e configuração
 
@@ -51,6 +51,22 @@ Preencha `OPENAI_API_KEY` no `.env`. O projeto utiliza apenas OpenAI.
 Os modelos de embeddings e de chat podem ser alterados por
 `OPENAI_EMBEDDING_MODEL` e `OPENAI_CHAT_MODEL`.
 Não envie o `.env` para o GitHub.
+
+Exemplo de configuração (substitua apenas a chave da API):
+
+```dotenv
+OPENAI_API_KEY=sua_chave_openai
+OPENAI_EMBEDDING_MODEL=text-embedding-3-large
+OPENAI_CHAT_MODEL=gpt-6-luna
+DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/rag
+PG_VECTOR_COLLECTION_NAME=pdf_desafio
+PDF_PATH=document.pdf
+```
+
+Use `#` para comentar uma linha no `.env`. A chave precisa ter acesso aos modelos
+configurados. `OPENAI_EMBEDDING_MODEL` gera os vetores; `OPENAI_CHAT_MODEL` gera
+as respostas. O nome da collection pode ser mantido como `pdf_desafio` e é criado
+automaticamente. `PDF_PATH` aponta para o PDF que será ingerido.
 
 As demais variáveis são:
 
@@ -133,25 +149,32 @@ A busca também pode ser chamada diretamente:
 python src/search.py "Sua pergunta sobre o PDF"
 ```
 
-## Banco e atualização da versão anterior
+## Reiniciar e testar novamente
 
-Esta versão usa `faculdade_postgres_data`, um novo volume para PostgreSQL 17.
-O volume PostgreSQL 16 da versão com API é preservado. Não é feita migração
-dos documentos antigos; execute a ingestão do PDF novamente.
-
-Se a versão anterior estiver rodando, execute `docker compose down` nela
-antes de mudar de branch, para liberar a porta 5432.
-Não use `down -v` se quiser preservar os dados antigos.
-
-Para parar esta versão:
+O banco persiste seus dados no volume `faculdade_postgres_data`.
+Para reiniciar os containers, sem apagar esse volume:
 
 ```bash
 docker compose down
+docker compose up -d
+docker compose ps -a
 ```
 
-Se trocar o modelo de embeddings por outro com dimensão diferente, use um banco
-novo ou recrie o volume desta versão e execute a ingestão novamente.
-`docker compose down -v` apaga os dados desta versão.
+Com o ambiente virtual ativo e o banco saudável, refaça a ingestão e abra o chat:
+
+```bash
+python src/ingest.py
+python src/chat.py
+```
+
+Teste perguntas respondidas explicitamente pelo PDF e perguntas fora do contexto.
+A ingestão substitui os vetores da collection configurada em cada execução.
+Se houver falha ao gerar os embeddings depois da exclusão, execute a ingestão
+novamente antes de consultar.
+
+Ao trocar o modelo de embeddings, refaça a ingestão antes de abrir o chat.
+Se houver erro de dimensão no banco, use um banco novo ou recrie o volume.
+`docker compose down -v` apaga os dados do volume desta versão.
 
 ## Testes
 
@@ -179,12 +202,13 @@ python -m unittest discover -s tests -v
 Os testes usam embeddings e LLM simulados, sem consumir a API OpenAI.
 O teste de integração usa uma collection de teste separada, PostgreSQL real e
 o PDF incluído. Ele verifica gravação, reingestão sem duplicatas e busca.
-O GitHub Actions executa esses testes automaticamente.
+Não há execução automática pelo GitHub Actions; os testes são executados
+pelos comandos acima.
 
-## Entrega acadêmica
+## Referência do desafio
 
-O enunciado pede um **fork público** do repositório da faculdade.
-Esta implementação foi preparada no repositório existente para revisão;
-isso não altera sua visibilidade nem o transforma em fork.
-Para a entrega, crie um fork público do repositório base e leve os arquivos
-desta versão para ele.
+Requisitos e estrutura base:
+[Ingestão e Busca Semântica com LangChain e Postgres — Full Cycle](https://github.com/devfullcycle/mba-ia-desafio-ingestao-busca).
+
+Código desta implementação:
+[AlfredoSouza/mba-ia-desafio-ingestao-busca-api](https://github.com/AlfredoSouza/mba-ia-desafio-ingestao-busca-api).
