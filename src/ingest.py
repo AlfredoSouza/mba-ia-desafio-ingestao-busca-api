@@ -1,27 +1,50 @@
 import argparse
-import asyncio
 from pathlib import Path
 
-from fastapi import UploadFile
+from langchain_community.document_loaders import PyPDFLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from src.database import initialize_database
-from src.services.document_service import save_upload
-from src.services.ingestion_service import ingest_document
+if __package__:
+    from .search import ROOT, get_settings, get_vectorstore
+else:
+    from search import ROOT, get_settings, get_vectorstore
 
 
-async def run(pdf_path: Path) -> None:
-    initialize_database()
-    with pdf_path.open("rb") as stream:
-        upload = UploadFile(filename=pdf_path.name, file=stream, headers={"content-type": "application/pdf"})
-        row, created = await save_upload(upload)
-    if created or row["status"] != "ready":
-        ingest_document(row["id"])
-    print(f"Documento {row['id']} processado.")
+def ingest_pdf(pdf_path: str | Path | None = None) -> int:
+    settings = get_settings()
+    path = Path(pdf_path or settings["pdf_path"])
+    if not path.is_absolute():
+        path = ROOT / path
+    if not path.is_file():
+        raise FileNotFoundError(f"PDF não encontrado: {path}")
+    pages = PyPDFLoader(str(path)).load()
+    chunks = RecursiveCharacterTextSplitter(
+        chunk_size=1000,
+        chunk_overlap=150,
+        length_function=len,
+        add_start_index=True,
+    ).split_documents(pages)
+    if not chunks:
+        raise ValueError("O PDF não contém texto extraível. PDFs digitalizados precisam de OCR.")
+    for index, chunk in enumerate(chunks):
+        chunk.metadata["chunk_index"] = index
+        chunk.metadata["source"] = path.name
+    # O desafio usa um único PDF: substitui somente a collection configurada.
+    vectorstore = get_vectorstore(settings, reset=True)
+    vectorstore.add_documents(
+        chunks,
+        ids=[f"{settings['collection_name']}:{index}" for index in range(len(chunks))],
+    )
+    print(f"PDF: {path.name}")
+    print(f"Ingestão concluída: {len(pages)} páginas e {len(chunks)} chunks.")
+    return len(chunks)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Ingere um PDF no PostgreSQL/pgVector.")
-    parser.add_argument("pdf", nargs="?", default="document.pdf", type=Path)
+    parser = argparse.ArgumentParser(description="Ingere o PDF no PostgreSQL com pgVector.")
+    parser.add_argument("pdf", nargs="?", help="Opcional: substitui PDF_PATH do .env.")
     args = parser.parse_args()
-    asyncio.run(run(args.pdf))
-
+    try:
+        ingest_pdf(args.pdf)
+    except Exception as exc:
+        parser.exit(1, f"Erro na ingestão: {exc}\n")
